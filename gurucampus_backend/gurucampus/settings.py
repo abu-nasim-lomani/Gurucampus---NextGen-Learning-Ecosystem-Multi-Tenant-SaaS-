@@ -28,6 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "admin.localhost",
+    "brac.localhost",
     # ভবিষ্যতে আমরা এখানে brac.localhost, aci.localhost ইত্যাদি যোগ করবো
 ]
 
@@ -50,6 +51,7 @@ TENANT_APPS = [
 
     # 3rd-party apps
     "rest_framework",
+    "rest_framework_simplejwt",
 
     # Our custom tenant-specific apps
     "users",
@@ -161,3 +163,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 AUTH_USER_MODEL = "users.CustomUser"
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}

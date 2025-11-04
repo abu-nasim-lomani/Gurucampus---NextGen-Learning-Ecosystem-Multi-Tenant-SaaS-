@@ -1,0 +1,12 @@
+# tenants/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import OrganizationViewSet
+
+# রাউটার তৈরি করছি
+router = DefaultRouter()
+router.register(r'organizations', OrganizationViewSet, basename='organization')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
