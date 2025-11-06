@@ -1,0 +1,30 @@
+# assessments/admin.py
+from django.contrib import admin
+from .models import Assessment, Problem, TestCase, Submission # <-- TestCase, Submission ইম্পোর্ট করুন
+
+# --- এটি একটি নতুন ইনলাইন ---
+class TestCaseInline(admin.TabularInline):
+    model = TestCase
+    extra = 1 # ডিফল্টভাবে ১টি নতুন টেস্ট কেস যোগ করার স্লট
+
+@admin.register(Problem)
+class ProblemAdmin(admin.ModelAdmin):
+    list_display = ('title', 'assessment')
+    list_filter = ('assessment',)
+    inlines = [TestCaseInline] # <-- Problem পেজের ভেতরে TestCase যোগ করার সুবিধা
+# ------------------------------
+
+class ProblemInline(admin.TabularInline):
+    model = Problem
+    extra = 1 
+
+@admin.register(Assessment)
+class AssessmentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'course')
+    inlines = [ProblemInline]
+
+@admin.register(Submission)
+class SubmissionAdmin(admin.ModelAdmin):
+    list_display = ('problem', 'student', 'status', 'timestamp')
+    list_filter = ('status', 'problem__assessment__course')
+    readonly_fields = ('output',) # Judge0-এর আউটপুট শুধু দেখা যাবে, এডিট করা যাবে না

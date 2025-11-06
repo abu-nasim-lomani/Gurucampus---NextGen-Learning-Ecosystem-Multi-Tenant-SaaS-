@@ -56,6 +56,8 @@ TENANT_APPS = [
     # Our custom tenant-specific apps
     "users",
     "courses",
+    "assessments",
+    "academics",
 ]
 # Application definition
 
@@ -173,3 +175,12 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+
+# --- Celery (Redis) Configuration ---
+# This tells Celery where the "order rail" (Redis) is.
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

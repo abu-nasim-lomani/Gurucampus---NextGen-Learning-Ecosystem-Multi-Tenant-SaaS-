@@ -1,18 +1,25 @@
 # courses/models.py
 from django.db import models
-from django.conf import settings
+# We are removing the 'settings' import as we no longer need AUTH_USER_MODEL here
+from academics.models import Department # Import Department from our new app
 
 class Course(models.Model):
+    """
+    Represents a Course "Blueprint" or "Subject" (e.g., "Networking").
+    This is the master library of content, owned by a department.
+    """
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL, # If dept is deleted, course remains
+        null=True,
+        related_name="courses"
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     
-    # প্রতিটি কোর্সের একজন 'মালিক' (ইন্সট্রাক্টর) থাকবে।
-    # আমরা settings.AUTH_USER_MODEL ব্যবহার করছি যা 'users.CustomUser'-কে নির্দেশ করে।
-    instructor = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="courses_taught"
-    )
+    # We have REMOVED the 'instructor' field.
+    # The instructor is now on the 'Class' model.
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

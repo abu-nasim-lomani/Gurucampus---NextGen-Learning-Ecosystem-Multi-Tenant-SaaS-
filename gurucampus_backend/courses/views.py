@@ -13,9 +13,3 @@ class CourseViewSet(viewsets.ModelViewSet):
     # শুধুমাত্র লগইন করা ইউজাররাই কোর্স দেখতে বা তৈরি করতে পারবে।
     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        """
-        কোর্স তৈরি করার সময় রিকোয়েস্টকারী ইউজারকে 
-        স্বয়ংক্রিয়ভাবে 'instructor' হিসেবে সেট করে।
-        """
-        serializer.save(instructor=self.request.user)
