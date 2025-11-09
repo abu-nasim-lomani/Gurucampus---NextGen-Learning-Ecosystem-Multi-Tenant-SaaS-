@@ -1,6 +1,8 @@
 # assessments/serializers.py
 from rest_framework import serializers
 from .models import Assessment, Problem, Submission, TestCase
+from .models import QuizQuestion, QuizAttempt
+# (users.serializers.UserSerializer এখানে দরকার নেই, এটি academics-এ দরকার)
 
 class ProblemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,9 +16,7 @@ class ProblemSerializer(serializers.ModelSerializer):
         ]
 
 class AssessmentSerializer(serializers.ModelSerializer):
-    # একটি Assessment-এর ভেতরের সব Problem দেখানোর জন্য
     problems = ProblemSerializer(many=True, read_only=True)
-
     class Meta:
         model = Assessment
         fields = [
@@ -24,10 +24,9 @@ class AssessmentSerializer(serializers.ModelSerializer):
             'title', 
             'course', 
             'created_at', 
-            'problems' # নেস্টেড প্রবলেমগুলো এখানে দেখাবে
+            'problems'
         ]
-        
-        
+
 class TestCaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestCase
@@ -39,11 +38,8 @@ class TestCaseSerializer(serializers.ModelSerializer):
             'is_hidden'
         ]
 
-
 class SubmissionSerializer(serializers.ModelSerializer):
-    # 'student'-কে read_only করছি, কারণ এটি রিকোয়েস্টকারী ইউজার থেকে সেট হবে
     student = serializers.StringRelatedField(read_only=True)
-
     class Meta:
         model = Submission
         fields = [
@@ -55,7 +51,49 @@ class SubmissionSerializer(serializers.ModelSerializer):
             'output', 
             'timestamp'
         ]
-        
-        # 'status' এবং 'output' শুধুমাত্র Autograder পরিবর্তন করতে পারবে,
-        # ইউজার নিজে নয়।
         read_only_fields = ['status', 'output', 'student']
+
+class QuizQuestionTeacherSerializer(serializers.ModelSerializer):
+    """
+    FOR TEACHERS: Serializer for creating/editing Quiz Questions.
+    """
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            'id', 
+            'assessment', 
+            'question_type', 
+            'question_text', 
+            'options',
+            'correct_answer'
+        ]
+
+class QuizQuestionStudentSerializer(serializers.ModelSerializer):
+    """
+    FOR STUDENTS: Serializer for viewing Quiz Questions.
+    """
+    class Meta:
+        model = QuizQuestion
+        fields = [
+            'id', 
+            'assessment', 
+            'question_type', 
+            'question_text', 
+            'options'
+        ]
+
+# --- এই ক্লাসটিই অনুপস্থিত ছিল (THE MISSING PIECE) ---
+class QuizAttemptSerializer(serializers.ModelSerializer):
+    """
+    Serializer for a student submitting an answer.
+    """
+    class Meta:
+        model = QuizAttempt
+        fields = [
+            'id', 
+            'question', 
+            'selected_answer', 
+            'is_correct', 
+            'timestamp'
+        ]
+        read_only_fields = ['is_correct', 'timestamp']

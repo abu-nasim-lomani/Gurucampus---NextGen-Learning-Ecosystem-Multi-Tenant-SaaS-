@@ -1,6 +1,7 @@
 # academics/serializers.py
 from rest_framework import serializers
-from .models import Department, Batch, Semester, Class
+from .models import Department, Batch, Semester, Class, ClassroomMember
+from users.serializers import UserSerializer
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,3 +33,36 @@ class ClassSerializer(serializers.ModelSerializer):
         ]
         # Make invite_code read-only; we'll generate it automatically
         read_only_fields = ['invite_code']
+        
+        
+class ClassroomMemberSerializer(serializers.ModelSerializer):
+
+    user = UserSerializer(read_only=True) 
+
+    class Meta:
+        model = ClassroomMember
+        fields = [
+            'id', 
+            'user', 
+            'classroom', 
+            'role', 
+            'status', 
+            'joined_at'
+        ]
+
+        read_only_fields = ['user', 'role', 'status', 'joined_at']
+        
+class ClassroomMemberManageSerializer(serializers.Serializer):
+    """
+    Serializer for a Teacher to approve or reject a student.
+    Validates 'member_id' and 'action'.
+    """
+    # ClassroomMember (Waiting Room) এন্ট্রির ID
+    member_id = serializers.IntegerField()
+    
+    # টিচার কী করতে চান?
+    VALID_ACTIONS = [
+        ClassroomMember.STATUS_ACTIVE,   # "Active"
+        ClassroomMember.STATUS_REJECTED  # "Rejected"
+    ]
+    action = serializers.ChoiceField(choices=VALID_ACTIONS)

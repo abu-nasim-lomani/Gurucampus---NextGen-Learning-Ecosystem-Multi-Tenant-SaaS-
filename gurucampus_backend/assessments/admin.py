@@ -1,6 +1,13 @@
 # assessments/admin.py
 from django.contrib import admin
-from .models import Assessment, Problem, TestCase, Submission # <-- TestCase, Submission ইম্পোর্ট করুন
+from .models import (
+        Assessment, 
+        Problem, 
+        TestCase, 
+        Submission, 
+        QuizQuestion, 
+        QuizAttempt
+    ) # <-- TestCase, Submission ইম্পোর্ট করুন
 
 # --- এটি একটি নতুন ইনলাইন ---
 class TestCaseInline(admin.TabularInline):
@@ -28,3 +35,17 @@ class SubmissionAdmin(admin.ModelAdmin):
     list_display = ('problem', 'student', 'status', 'timestamp')
     list_filter = ('status', 'problem__assessment__course')
     readonly_fields = ('output',) # Judge0-এর আউটপুট শুধু দেখা যাবে, এডিট করা যাবে না
+    
+    
+    
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ('question_text', 'assessment', 'question_type')
+    list_filter = ('assessment', 'question_type')
+    search_fields = ('question_text',)
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ('student', 'question', 'selected_answer', 'is_correct')
+    list_filter = ('is_correct', 'question__assessment')
+    search_fields = ('student__username', 'question__question_text')

@@ -1,14 +1,13 @@
 # assessments/models.py
 from django.db import models
 from django.conf import settings
-from courses.models import Course # courses অ্যাপ থেকে Course মডেল ইম্পোর্ট করছি
 
 class Assessment(models.Model):
     """
     একটি পরীক্ষা বা অ্যাসাইনমেন্ট (যেমন "Midterm Exam")
     """
     course = models.ForeignKey(
-        Course, 
+        "courses.Course",  # <-- "app_name.ModelName"
         on_delete=models.CASCADE, 
         related_name="assessments"
     )
@@ -90,3 +89,64 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"Submission by {self.student.username} for {self.problem.title} [{self.status}]"
+    
+    
+class QuizQuestion(models.Model):
+    """
+    Represents a non-coding question, like an MCQ.
+    Linked to an Assessment.
+    """
+    assessment = models.ForeignKey(
+        Assessment, 
+        on_delete=models.CASCADE, 
+        related_name="quiz_questions"
+    )
+    
+    QUESTION_TYPE_CHOICES = [
+        ('MCQ', 'Multiple Choice'),
+        # ('ShortAnswer', 'Short Answer'), # আমরা ভবিষ্যতে এগুলো যোগ করতে পারবো
+    ]
+    question_type = models.CharField(
+        max_length=20, 
+        choices=QUESTION_TYPE_CHOICES, 
+        default='MCQ'
+    )
+    
+    question_text = models.TextField()
+    
+    # MCQ অপশনগুলো (JSON হিসেবে সেভ করা সহজ)
+    # যেমন: {"A": "Option 1", "B": "Option 2", "C": "Option 3"}
+    options = models.JSONField(blank=True, null=True)
+    
+    # সঠিক উত্তর (যেমন: "A")
+    correct_answer = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.question_text[:50] # প্রশ্নের প্রথম ৫০ অক্ষর দেখাবে
+
+
+class QuizAttempt(models.Model):
+    """
+    Represents a student's answer to a single QuizQuestion.
+    """
+    question = models.ForeignKey(
+        QuizQuestion, 
+        on_delete=models.CASCADE, 
+        related_name="attempts"
+    )
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name="quiz_attempts"
+    )
+    
+    # ছাত্রের বেছে নেওয়া উত্তর (যেমন: "B")
+    selected_answer = models.CharField(max_length=255)
+    
+    # API স্বয়ংক্রিয়ভাবে এটি সেট করবে
+    is_correct = models.BooleanField(default=False) 
+    
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.username}'s answer to Q: {self.question_id}"

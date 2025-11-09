@@ -1,6 +1,7 @@
 # academics/models.py
 from django.db import models
 from django.conf import settings
+import secrets  # <-- Your "world-class" auto-generation library
 
 class Department(models.Model):
     """
@@ -20,22 +21,14 @@ class Batch(models.Model):
     """
     department = models.ForeignKey(
         "academics.Department",
-        
-        # --- ফিক্স ২ (Deep Analysis): একটি ব্যাচ অবশ্যই একটি ডিপার্টমেন্টের অংশ।
-        # যদি ডিপার্টমেন্ট ডিলিট হয়, তবে ব্যাচও ডিলিট হওয়া উচিত।
-        # তাই on_delete=models.CASCADE ব্যবহার করা হলো।
         on_delete=models.CASCADE, 
-        
-        # --- ফিক্স ১ (The Error): 'courses' থেকে 'batches'-এ পরিবর্তন করা হলো
-        # এটি 'courses.Course' মডেলের সাথে ক্ল্যাশ (clash) সমাধান করবে।
         related_name="batches"
     )
     name = models.CharField(max_length=255) # e.g., "E-101" or "49th Batch"
     start_date = models.DateField()
-    end_date = models.DateField(blank=True, null=True) # ব্যাচের শেষ তারিখ ঐচ্ছিক হতে পারে
+    end_date = models.DateField(blank=True, null=True)
 
     def __str__(self):
-        # department এখন null হতে পারে না, তাই এই কোডটি নিরাপদ।
         return f"{self.name} ({self.department.name})"
 
 class Semester(models.Model):
@@ -54,21 +47,20 @@ class Semester(models.Model):
 class Class(models.Model):
     """
     The "Live Classroom" or "Section".
+    (Updated to auto-generate invite codes)
     """
     course = models.ForeignKey(
-        "courses.Course",  # স্ট্রিং নোটেশন ঠিক আছে
+        "courses.Course",  # String notation is correct
         on_delete=models.CASCADE, 
         related_name="classes"
     )
     batch = models.ForeignKey(
-        # --- ফিক্স ৩ (Best Practice): সামঞ্জস্যের জন্য স্ট্রিং নোটেশন ব্যবহার করা হলো
-        "academics.Batch", 
+        "academics.Batch", # String notation is correct
         on_delete=models.CASCADE, 
         related_name="classes"
     )
     semester = models.ForeignKey(
-        # --- ফিক্স ৩ (Best Practice): সামঞ্জস্যের জন্য স্ট্রিং নোটেশন ব্যবহার করা হলো
-        "academics.Semester", 
+        "academics.Semester", # String notation is correct
         on_delete=models.CASCADE, 
         related_name="classes"
     )
@@ -78,12 +70,79 @@ class Class(models.Model):
         null=True,
         related_name="classes_taught"
     )
+    
+    # --- THIS IS THE UPDATE ---
+    # We will auto-generate this code. 
+    # max_length=10 is safe for our 8-char token.
     invite_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
     
     def __str__(self):
-        # এই __str__ মেথডটি এখন কাজ করবে, কারণ সব মডেল ঠিকভাবে লিঙ্ক করা আছে।
-        # তবে, এটি অনেকগুলো ডেটাবেস কোয়েরি করতে পারে। আমরা পরে এটি অপ্টিমাইজ করবো।
         try:
             return f"{self.course.title} ({self.batch.name}) - {self.semester.name}"
         except Exception:
             return f"Class ID: {self.id} (Incomplete Data)"
+
+    # --- THIS IS THE "WORLD-CLASS" LOGIC YOU REQUESTED ---
+    def save(self, *args, **kwargs):
+        """
+        Override save to auto-generate a unique invite code.
+        """
+        if not self.invite_code:
+            # Generate a unique, 8-character, URL-safe code
+            self.invite_code = secrets.token_urlsafe(8)
+            
+            # Ensure it's truly unique
+            while Class.objects.filter(invite_code=self.invite_code).exists():
+                self.invite_code = secrets.token_urlsafe(8)
+                
+        super().save(*args, **kwargs) # Call the original save method
+            
+            
+class ClassroomMember(models.Model):
+    """
+    Connects a User to a Class (the "Waiting Room").
+    This manages roles (Student/Teacher) and status (Pending/Active).
+    """
+    
+    # --- Role Choices ---
+    ROLE_STUDENT = 'Student'
+    ROLE_TEACHER = 'Teacher'
+    ROLE_CHOICES = [
+        (ROLE_STUDENT, 'Student'),
+        (ROLE_TEACHER, 'Teacher'),
+    ]
+
+    # --- Status Choices (The Security Logic) ---
+    STATUS_PENDING = 'Pending'
+    STATUS_ACTIVE = 'Active'
+    STATUS_REJECTED = 'Rejected'
+    STATUS_INACTIVE = 'Inactive'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),   # In the waiting room
+        (STATUS_ACTIVE, 'Active'),     # Approved by teacher
+        (STATUS_REJECTED, 'Rejected'), # Rejected by teacher
+        (STATUS_INACTIVE, 'Inactive'), # Semester ended
+    ]
+
+    # --- Model Fields ---
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="class_memberships"
+    )
+    classroom = models.ForeignKey(
+        "academics.Class",
+        on_delete=models.CASCADE,
+        related_name="members"
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_STUDENT)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # A user can only join a class once
+        unique_together = ('user', 'classroom')
+
+    def __str__(self):
+        return f"{self.user.username} as {self.role} in {self.classroom_id} ({self.status})"
